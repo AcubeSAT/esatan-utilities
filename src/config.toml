@@ -1,2 +1,5 @@
-# Example
-filename = "example.csv"
+[window]
+
+    [window.dimension]
+    width = 190
+    height = 100
