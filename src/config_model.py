@@ -2,4 +2,4 @@ from pydantic import BaseModel
 
 
 class Config(BaseModel):
-    filename: str
+    window: dict[str, dict[str, int]]
