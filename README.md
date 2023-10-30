@@ -25,7 +25,7 @@ Various utilities in script form for interfacing and working with ESATAN-TMS.
 
 #### End User
 
-Grab the binary from the [releases](https://github.com/xlxs4/loc-spotting-utils/releases) page.
+Grab the binary from the [releases](https://github.com/AcubeSAT/esatan-utilities/releases/tag/v0.1.0-alpha) page.
 Make sure that the `.zip` you selected is appropriate for your platform, e.g., `windows.zip`.
 Extract the archive, **navigate to the `main` directory**, and start the `main` executable.
 
