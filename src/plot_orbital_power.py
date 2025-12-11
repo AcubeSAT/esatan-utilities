@@ -9,21 +9,41 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
-def process_model_combined_format(model_dir: Path, model_name: str):
+# ============================================
+# CONFIGURATION - Specify your CSV file(s) here
+# ============================================
+# For single file: provide a single path
+# For multiple files: provide a list of paths (will be merged)
+CSV_FILES = [
+    r"c:\Users\chris\Desktop\A3S\utilities\MRR-analysis-files\Acubesat_11_12_25\Data\Orbital_cold_case_11_12_25_nominal_science_nominal_Yay_finally_Temperatures.csv",
+    r"c:\Users\chris\Desktop\A3S\utilities\MRR-analysis-files\Acubesat_11_12_25\Data\Orbital_cold_case_11_12_25_nominal_science_nominal_Yay_finally_Temperatures (1).csv",
+]
+
+
+def process_model_combined_format(model_dir: Path, model_name: str, csv_files_input: list):
     """Process model with combined temperature and power CSV format (10_12_25 style)."""
     data_dir = model_dir / 'Data'
-    # Check for both 'Plots' and 'plots' directory names
-    if (model_dir / 'Plots').exists():
-        plots_dir = model_dir / 'Plots'
+    
+    # Create output folder based on CSV filename (e.g., "plots_hot_case" or "plots_cold_case")
+    # Use first file to determine case type
+    csv_name = csv_files_input[0].stem  # Get filename without extension
+    if 'hot_case' in csv_name.lower():
+        case_type = 'hot_case'
+    elif 'cold_case' in csv_name.lower():
+        case_type = 'cold_case'
     else:
-        plots_dir = model_dir / 'plots'
+        case_type = 'output'
     
-    # Find all combined CSV files - there might be multiple files with different sensors
-    csv_files = list(data_dir.glob('*Temperatures*.csv'))
-    if not csv_files:
-        raise FileNotFoundError(f"No combined Temperatures CSV found in {data_dir}")
+    plots_dir = model_dir / f'plots_{case_type}'
+    print(f"Output directory: {plots_dir}", flush=True)
     
-    print(f"Found {len(csv_files)} CSV file(s) to process", flush=True)
+    # Use the specified CSV files
+    csv_files = csv_files_input
+    
+    if len(csv_files) > 1:
+        print(f"Processing and merging {len(csv_files)} CSV files", flush=True)
+    else:
+        print(f"Processing CSV file: {csv_files[0].name}", flush=True)
     
     # Dictionary to store all data from all CSV files
     all_heater_data = {}
@@ -368,14 +388,21 @@ def process_model_combined_format(model_dir: Path, model_name: str):
     plt.close(fig_combined)
 
 
-def process_model_sequential_format(model_dir: Path, model_name: str):
+def process_model_sequential_format(model_dir: Path, model_name: str, csv_file: Path):
     """Process model with sequential (chained) format (7_12_25 style)."""
     data_dir = model_dir / 'Data'
-    # Check for both 'Plots' and 'plots' directory names
-    if (model_dir / 'Plots').exists():
-        plots_dir = model_dir / 'Plots'
+    
+    # Create output folder based on CSV filename
+    csv_name = csv_file.stem
+    if 'hot_case' in csv_name.lower():
+        case_type = 'hot_case'
+    elif 'cold_case' in csv_name.lower():
+        case_type = 'cold_case'
     else:
-        plots_dir = model_dir / 'plots'
+        case_type = 'output'
+    
+    plots_dir = model_dir / f'plots_{case_type}'
+    print(f"Output directory: {plots_dir}", flush=True)
     
     # Read the power CSV, skipping the header rows
     power_filepath = data_dir / 'Orbital_cold_case_7_12_25_Power_Max_1W_SC_NOM.csv'
@@ -752,62 +779,37 @@ def process_model_sequential_format(model_dir: Path, model_name: str):
 
 
 def main():
-    script_dir = Path(__file__).resolve().parent
-    project_dir = script_dir.parent
-    data_dir = project_dir / 'MRR-analysis-files'
+    # Use the CSV file(s) specified at the top of the script
+    # Convert to list if single string provided
+    if isinstance(CSV_FILES, str):
+        csv_files_list = [Path(CSV_FILES)]
+    else:
+        csv_files_list = [Path(f) for f in CSV_FILES]
     
-    # Only process Acubesat_11_12_25
-    target_model = data_dir / 'Acubesat_11_12_25'
+    # Check all files exist
+    for csv_path in csv_files_list:
+        if not csv_path.exists():
+            print(f"Error: CSV file not found: {csv_path}", flush=True)
+            return
     
-    if not target_model.exists() or not target_model.is_dir():
-        print("Error: Acubesat_11_12_25 directory not found in MRR-analysis-files/", flush=True)
-        return
+    # Get model directory from first CSV path (parent's parent)
+    model_dir = csv_files_list[0].parent.parent
+    model_name = model_dir.name
     
-    model_dirs = [target_model]
-    print(f"Processing single model: Acubesat_11_12_25", flush=True)
+    print(f"Processing model: {model_name}", flush=True)
+    print(f"CSV file(s): {[f.name for f in csv_files_list]}", flush=True)
     
-    # Process each model
-    for model_dir in sorted(model_dirs):
-        model_name = model_dir.name
-        print(f"\n{'='*60}", flush=True)
-        print(f"Processing model: {model_name}", flush=True)
-        print(f"{'='*60}", flush=True)
-        
-        try:
-            # Detect which format to use based on files present
-            data_subdir = model_dir / 'Data'
-            if not data_subdir.exists():
-                print(f"Warning: No Data directory found in {model_name}", flush=True)
-                continue
-            
-            # Check for combined format (has *Temperatures_Power.csv or *Temperatures.csv with power data)
-            combined_files = list(data_subdir.glob('*Temperatures_Power.csv'))
-            if not combined_files:
-                # Also check for files that might have both temp and power (like *Temperatures.csv)
-                temp_files_all = list(data_subdir.glob('*Temperatures*.csv'))
-                # Filter out files that are clearly separate format
-                combined_files = [f for f in temp_files_all if 'SC_NOM' not in f.name and 'Temperatures_Power' not in f.name]
-            
-            # Check for sequential format (has separate Power and Temperature CSVs)
-            power_files = list(data_subdir.glob('*Power*.csv'))
-            separate_files = [f for f in power_files if 'Temperatures_Power' not in f.name]
-            temp_files_separate = list(data_subdir.glob('*Temperatures_SC_NOM.csv'))
-            
-            if combined_files:
-                print(f"Detected combined format (Combined Temperatures/Power CSV)", flush=True)
-                process_model_combined_format(model_dir, model_name)
-            elif separate_files and temp_files_separate:
-                print(f"Detected sequential format (separate Power/Temperature CSVs)", flush=True)
-                process_model_sequential_format(model_dir, model_name)
-            else:
-                print(f"Warning: Could not determine format for {model_name}", flush=True)
-                continue
-            
-            print(f"[SUCCESS] Successfully processed {model_name}", flush=True)
-        except Exception as e:
-            print(f"[ERROR] Error processing {model_name}: {e}", flush=True)
-            import traceback
-            traceback.print_exc()
+    print(f"\n{'='*60}", flush=True)
+    print(f"Processing: {model_name}", flush=True)
+    print(f"{'='*60}", flush=True)
+    
+    try:
+        process_model_combined_format(model_dir, model_name, csv_files_list)
+        print(f"\n[SUCCESS] Successfully processed {model_name}", flush=True)
+    except Exception as e:
+        print(f"\n[ERROR] Error processing {model_name}: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
 
 
 if __name__ == "__main__":
