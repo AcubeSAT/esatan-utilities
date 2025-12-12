@@ -19,16 +19,30 @@ CSV_FILES = [
     r"c:\Users\chris\Desktop\A3S\utilities\MRR-analysis-files\Acubesat_11_12_25\Data\Orbital_cold_case_11_12_25_nominal_science_nominal_Yay_finally_Temperatures (1).csv",
 ]
 
+# Other available files:
+# Hot case 1:
+# CSV_FILES = [r"c:\Users\chris\Desktop\A3S\utilities\MRR-analysis-files\Acubesat_11_12_25\Data\Orbital_hot_case_11_12_25_nominal_science_1.csv"]
+# Hot case 2 (LTAN6):
+# CSV_FILES = [r"c:\Users\chris\Desktop\A3S\utilities\MRR-analysis-files\Acubesat_11_12_25\Data\Orbital_HOT_case_12_12_25_nominal_science_nominal_LTAN6.csv"]
+
 
 def process_model_combined_format(model_dir: Path, model_name: str, csv_files_input: list):
     """Process model with combined temperature and power CSV format (10_12_25 style)."""
     data_dir = model_dir / 'Data'
     
-    # Create output folder based on CSV filename (e.g., "plots_hot_case" or "plots_cold_case")
-    # Use first file to determine case type
+    # Create output folder based on CSV filename
+    # Use first file to determine case type and specific identifier
     csv_name = csv_files_input[0].stem  # Get filename without extension
+    
+    # Extract a meaningful identifier from the filename
     if 'hot_case' in csv_name.lower():
-        case_type = 'hot_case'
+        # Check if it has a specific identifier (like LTAN6)
+        if 'LTAN6' in csv_name.upper():
+            case_type = 'hot_case_LTAN6'
+        elif '11_12_25' in csv_name:
+            case_type = 'hot_case_11_12_25'
+        else:
+            case_type = 'hot_case'
     elif 'cold_case' in csv_name.lower():
         case_type = 'cold_case'
     else:
@@ -243,7 +257,7 @@ def process_model_combined_format(model_dir: Path, model_name: str, csv_files_in
     plots_dir.mkdir(parents=True, exist_ok=True)
     
     # 1. Create POWER ONLY plot
-    fig_power = plt.figure(figsize=(16, 6))
+    fig_power = plt.figure(figsize=(12, 5))
     ax_power = fig_power.add_subplot(111)
     
     # Only plot specified heaters
@@ -254,24 +268,24 @@ def process_model_combined_format(model_dir: Path, model_name: str, csv_files_in
         color = heater_colors.get(heater_name, '#000000')
         label = f"{heater_name} ({data['display_name']})"
         ax_power.plot(data['times'], data['power'], label=label, 
-                linewidth=1.0, color=color, alpha=0.8)
+                linewidth=1.5, color=color, alpha=0.8)
     
     # Add transition lines and labels if detected
     if transition_times:
         ylim = ax_power.get_ylim()
         for i, t in enumerate(transition_times):
-            ax_power.axvline(x=t, color='gray', linestyle='--', linewidth=1.5, alpha=0.7, zorder=10)
-            ax_power.text(t + 2, ylim[1] * 0.95, f'{t:.1f}h', ha='left', fontsize=9, 
+            ax_power.axvline(x=t, color='gray', linestyle='--', linewidth=2, alpha=0.7, zorder=10)
+            ax_power.text(t + 2, ylim[1] * 0.95, f'{t:.1f}h', ha='left', fontsize=13, 
                          color='gray')
         # Add phase labels
         for center, label in phase_labels:
-            ax_power.text(center, ylim[1] * 0.85, label, ha='center', fontsize=10, 
+            ax_power.text(center, ylim[1] * 0.85, label, ha='center', fontsize=14, 
                          color='#26677F', weight='bold', alpha=0.7)
     
-    ax_power.set_xlabel('Time (hours)', fontsize=11)
-    ax_power.set_ylabel('Power Applied (W)', fontsize=11)
-    ax_power.set_title(f'{model_name} - Heater Power Applied', fontsize=12, fontweight='bold')
-    ax_power.legend(loc='upper right', fontsize=9, ncol=2)
+    ax_power.set_xlabel('Time (hours)')
+    ax_power.set_ylabel('Power Applied (W)')
+    ax_power.set_title(f'{model_name} - Heater Power Applied', fontweight='bold')
+    ax_power.legend(loc='upper right', ncol=2)
     ax_power.grid(True, alpha=0.3)
     ax_power.set_xlim(0, max_time)
     
@@ -284,7 +298,7 @@ def process_model_combined_format(model_dir: Path, model_name: str, csv_files_in
     plt.close(fig_power)
     
     # 2. Create TEMPERATURE ONLY plot
-    fig_temp = plt.figure(figsize=(16, 6))
+    fig_temp = plt.figure(figsize=(12, 5))
     ax_temp = fig_temp.add_subplot(111)
     
     sensor_list = list(sensor_data.items())
@@ -292,24 +306,24 @@ def process_model_combined_format(model_dir: Path, model_name: str, csv_files_in
         # Use coordinated color if available, otherwise use a default from component_colors
         color = sensor_color_map.get(sensor_name, list(component_colors.values())[i % len(component_colors)])
         ax_temp.plot(data['times'], data['temps'], label=sensor_name, 
-                linewidth=1.0, color=color, alpha=0.7)
+                linewidth=1.5, color=color, alpha=0.7)
     
     # Add transition lines and labels if detected
     if transition_times:
         ylim = ax_temp.get_ylim()
         for i, t in enumerate(transition_times):
-            ax_temp.axvline(x=t, color='gray', linestyle='--', linewidth=1.5, alpha=0.7, zorder=10)
-            ax_temp.text(t + 2, ylim[1] * 0.95, f'{t:.1f}h', ha='left', fontsize=9, 
+            ax_temp.axvline(x=t, color='gray', linestyle='--', linewidth=2, alpha=0.7, zorder=10)
+            ax_temp.text(t + 2, ylim[1] * 0.95, f'{t:.1f}h', ha='left', fontsize=13, 
                          color='gray')
         # Add phase labels
         for center, label in phase_labels:
-            ax_temp.text(center, ylim[1] * 0.85, label, ha='center', fontsize=10, 
+            ax_temp.text(center, ylim[1] * 0.85, label, ha='center', fontsize=14, 
                          color='#26677F', weight='bold', alpha=0.7)
     
-    ax_temp.set_xlabel('Time (hours)', fontsize=11)
-    ax_temp.set_ylabel('Temperature (°C)', fontsize=11)
-    ax_temp.set_title(f'{model_name} - Temperatures', fontsize=12, fontweight='bold')
-    ax_temp.legend(loc='upper right', fontsize=9, ncol=2)
+    ax_temp.set_xlabel('Time (hours)')
+    ax_temp.set_ylabel('Temperature (°C)')
+    ax_temp.set_title(f'{model_name} - Temperatures', fontweight='bold')
+    ax_temp.legend(loc='upper right', ncol=2)
     ax_temp.grid(True, alpha=0.3)
     ax_temp.set_xlim(0, max_time)
     
@@ -322,7 +336,7 @@ def process_model_combined_format(model_dir: Path, model_name: str, csv_files_in
     plt.close(fig_temp)
     
     # 3. Create COMBINED plot (power + temperatures)
-    fig_combined, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 10))
+    fig_combined, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
     
     # Plot power on first subplot - only specified heaters
     for heater_name, data in sorted(heater_data.items()):
@@ -331,24 +345,24 @@ def process_model_combined_format(model_dir: Path, model_name: str, csv_files_in
         color = heater_colors.get(heater_name, '#000000')
         label = f"{heater_name} ({data['display_name']})"
         ax1.plot(data['times'], data['power'], label=label, 
-                linewidth=1.0, color=color, alpha=0.8)
+                linewidth=1.5, color=color, alpha=0.8)
     
     # Add transition lines and labels to power subplot
     if transition_times:
         ylim1 = ax1.get_ylim()
         for i, t in enumerate(transition_times):
-            ax1.axvline(x=t, color='gray', linestyle='--', linewidth=1.5, alpha=0.7, zorder=10)
-            ax1.text(t + 2, ylim1[1] * 0.95, f'{t:.1f}h', ha='left', fontsize=9, 
+            ax1.axvline(x=t, color='gray', linestyle='--', linewidth=2, alpha=0.7, zorder=10)
+            ax1.text(t + 2, ylim1[1] * 0.95, f'{t:.1f}h', ha='left', fontsize=13, 
                      color='gray')
         # Add phase labels
         for center, label in phase_labels:
-            ax1.text(center, ylim1[1] * 0.85, label, ha='center', fontsize=10, 
+            ax1.text(center, ylim1[1] * 0.85, label, ha='center', fontsize=14, 
                      color='#26677F', weight='bold', alpha=0.7)
     
-    ax1.set_xlabel('Time (hours)', fontsize=11)
-    ax1.set_ylabel('Power Applied (W)', fontsize=11)
-    ax1.set_title(f'{model_name} - Heater Power Applied', fontsize=12, fontweight='bold')
-    ax1.legend(loc='upper right', fontsize=9, ncol=2)
+    ax1.set_xlabel('Time (hours)')
+    ax1.set_ylabel('Power Applied (W)')
+    ax1.set_title(f'{model_name} - Heater Power Applied', fontweight='bold')
+    ax1.legend(loc='upper right', ncol=2)
     ax1.grid(True, alpha=0.3)
     ax1.set_xlim(0, max_time)
     
@@ -358,24 +372,24 @@ def process_model_combined_format(model_dir: Path, model_name: str, csv_files_in
         # Use coordinated color if available, otherwise use a default
         color = sensor_color_map.get(sensor_name, list(component_colors.values())[i % len(component_colors)])
         ax2.plot(data['times'], data['temps'], label=sensor_name, 
-                linewidth=1.0, color=color, alpha=0.7)
+                linewidth=1.5, color=color, alpha=0.7)
     
     # Add transition lines and labels to temperature subplot
     if transition_times:
         ylim2 = ax2.get_ylim()
         for i, t in enumerate(transition_times):
-            ax2.axvline(x=t, color='gray', linestyle='--', linewidth=1.5, alpha=0.7, zorder=10)
-            ax2.text(t + 2, ylim2[1] * 0.95, f'{t:.1f}h', ha='left', fontsize=9, 
+            ax2.axvline(x=t, color='gray', linestyle='--', linewidth=2, alpha=0.7, zorder=10)
+            ax2.text(t + 2, ylim2[1] * 0.95, f'{t:.1f}h', ha='left', fontsize=13, 
                      color='gray')
         # Add phase labels
         for center, label in phase_labels:
-            ax2.text(center, ylim2[1] * 0.85, label, ha='center', fontsize=10, 
+            ax2.text(center, ylim2[1] * 0.85, label, ha='center', fontsize=14, 
                      color='#26677F', weight='bold', alpha=0.7)
     
-    ax2.set_xlabel('Time (hours)', fontsize=11)
-    ax2.set_ylabel('Temperature (°C)', fontsize=11)
-    ax2.set_title(f'{model_name} - Temperatures', fontsize=12, fontweight='bold')
-    ax2.legend(loc='upper right', fontsize=9, ncol=2)
+    ax2.set_xlabel('Time (hours)')
+    ax2.set_ylabel('Temperature (°C)')
+    ax2.set_title(f'{model_name} - Temperatures', fontweight='bold')
+    ax2.legend(loc='upper right', ncol=2)
     ax2.grid(True, alpha=0.3)
     ax2.set_xlim(0, max_time)
     
@@ -650,7 +664,7 @@ def process_model_sequential_format(model_dir: Path, model_name: str, csv_file: 
     plots_dir.mkdir(parents=True, exist_ok=True)
     
     # 1. Create POWER ONLY plot
-    fig_power = plt.figure(figsize=(16, 6))
+    fig_power = plt.figure(figsize=(12, 5))
     ax_power = fig_power.add_subplot(111)
     
     ax_power.plot(df_power['Time_h_1'], df_power['Power_chained_3'], label='H001 Power (nominal mode)', 
@@ -686,7 +700,7 @@ def process_model_sequential_format(model_dir: Path, model_name: str, csv_file: 
     plt.close(fig_power)
     
     # 2. Create TEMPERATURE ONLY plot
-    fig_temp = plt.figure(figsize=(16, 6))
+    fig_temp = plt.figure(figsize=(12, 5))
     ax_temp = fig_temp.add_subplot(111)
     
     # Convert to list to ensure consistent ordering
@@ -720,7 +734,7 @@ def process_model_sequential_format(model_dir: Path, model_name: str, csv_file: 
     plt.close(fig_temp)
     
     # 3. Create COMBINED plot (power + temperatures)
-    fig_combined, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 10))
+    fig_combined, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
     
     # Plot power on first subplot
     ax1.plot(df_power['Time_h_1'], df_power['Power_chained_3'], label='H001 Power (nominal mode)', 
